@@ -1,0 +1,13 @@
+{
+  "name": "playwright-test-code",
+  "private": true,
+  "description": "Browser Test Agent 自动生成的 Playwright 测试用例",
+  "scripts": {
+    "test": "node scripts/run-tests.mjs",
+    "test:headed": "HEADED=1 node scripts/run-tests.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "playwright": "^1.50.0"
+  }
+}
