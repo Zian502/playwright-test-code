@@ -20,6 +20,17 @@ function buildTestEnv() {
   return out;
 }
 
+function hasTestCredentials(testEnv) {
+  return Boolean(testEnv.TEST_USERNAME && testEnv.TEST_PASSWORD);
+}
+
+/** 含 testEnv 凭据或明显为登录流程的 spec，在无 Secrets 时跳过以免 CI 误报 */
+function shouldSkipSpecWithoutCredentials(content, testEnv) {
+  if (hasTestCredentials(testEnv)) return false;
+  if (/\btestEnv\.(TEST_USERNAME|TEST_PASSWORD)\b/.test(content)) return true;
+  return /moonx-login|login-modal|登录弹|登入弹|test\([^)]*登录/i.test(content);
+}
+
 function extractAllTestCallbackBodies(source) {
   const bodies = [];
   let pos = 0;
@@ -122,16 +133,28 @@ async function main() {
   }
 
   const testEnv = buildTestEnv();
+  if (!hasTestCredentials(testEnv)) {
+    console.log('[runner] 未配置 TEST_USERNAME/TEST_PASSWORD：将跳过依赖登录凭据的 spec 文件');
+  }
   const totalTimeout = Number(process.env.TEST_TIMEOUT_MS ?? 120_000);
   const perTestTimeout = Math.max(15_000, Math.floor(totalTimeout / 4));
   const headless = process.env.HEADED !== '1' && process.env.HEADED !== 'true';
 
   let totalPassed = 0;
   let totalFailed = 0;
+  let totalSkipped = 0;
   const browser = await chromium.launch({ headless });
   try {
     for (const file of entries) {
       const content = await readFile(join(testsDir, file), 'utf8');
+      if (shouldSkipSpecWithoutCredentials(content, testEnv)) {
+        console.log(`\n=== ${file} ===`);
+        console.log(
+          '[skip] 需要 Actions Secrets 或 .env 中的 TEST_USERNAME、TEST_PASSWORD（登录类用例）',
+        );
+        totalSkipped++;
+        continue;
+      }
       console.log(`\n=== ${file} ===`);
       const context = await browser.newContext();
       const page = await context.newPage();
@@ -149,7 +172,7 @@ async function main() {
     await browser.close();
   }
 
-  console.log(`\n合计：通过 ${totalPassed} · 失败 ${totalFailed}`);
+  console.log(`\n合计：通过 ${totalPassed} · 失败 ${totalFailed} · 跳过 ${totalSkipped}`);
   process.exit(totalFailed > 0 ? 1 : 0);
 }
 

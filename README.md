@@ -15,9 +15,11 @@
 | Secret | 说明 |
 |--------|------|
 | `BASE_URL` | 被测页面 URL（也可写在 `.browser-test-agent.json` 的 `defaultBaseUrl`） |
-| `TEST_USERNAME` | 登录账号（可选） |
-| `TEST_PASSWORD` | 登录密码（可选） |
+| `TEST_USERNAME` | 登录账号（**含登录类 spec 时必填**） |
+| `TEST_PASSWORD` | 登录密码（**含登录类 spec 时必填**） |
 | `RUN_TEST_ENV_KEYS` | 额外注入键名，逗号分隔（可选） |
+
+未配置登录凭据时，runner 会**跳过**引用 `testEnv` 或标题含「登录」的 spec，避免 `fill(undefined)` 导致 CI 失败；搜索等非登录用例仍会执行。
 
 **触发方式：**
 
